@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "945805816565",
+    "project_id": "tag-app-d624c",
+    "storage_bucket": "tag-app-d624c.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:945805816565:android:03b57293a0e7d551024bbc",
+        "android_client_info": {
+          "package_name": "com.flutter.tag_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwpRUq3Ks96nqxobiJMtWcqgnU8RT858M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
