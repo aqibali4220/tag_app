@@ -5,8 +5,11 @@ import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_state_manager/src/simple/get_controllers.dart';
 import 'package:tag_app/controllers/home_controller.dart';
+import 'package:tag_app/utils/firebase_notification/firebase_notification.dart';
 import 'package:tag_app/utils/permissions.dart';
+import 'package:uuid/uuid.dart';
 
+import '../utils/chat_module_by_aqib/data/firebase_functions.dart';
 import '../utils/const.dart';
 import '../view/dashboard.dart';
 import '../view/home_screen.dart';
@@ -23,8 +26,11 @@ class AuthController extends GetxController {
 
   CollectionReference users = FirebaseFirestore.instance.collection('users');
 
+  // var uuid=const Uuid();
+
+
   signInFunc() {
-    // Get.dialog(ProgressBar(), barrierDismissible: false);
+    Get.dialog(ProgressBar(), barrierDismissible: false);
 
     try {
       FirebaseAuth.instance
@@ -33,9 +39,11 @@ class AuthController extends GetxController {
           .then((value) async {
         Get.find<GeneralController>().gunBox.put(cUserSession, true);
         await getCurrentLocation();
-
+        Get.find<GeneralController>().gunBox.put(cUserEmail, emailController.text);
+        Get.find<GeneralController>().gunBox.put(cUserName, nameController.text);
         await addUserData();
-        Get.find<HomeController>().setTagPins();
+        // Get.find<HomeController>().setTagPins();
+        FirebaseNotifications().getDeviceToken();
 
         Get.to(() => HomeScreen());
         nameController.clear();
@@ -75,7 +83,7 @@ class AuthController extends GetxController {
   }
 
   Future addUserData() {
-    return users.doc(FirebaseAuth.instance.currentUser!.uid).set({
+    return users.add({
       'user_name': nameController.text,
       'email': emailController.text,
       'location': locationController.text,
@@ -95,9 +103,19 @@ class AuthController extends GetxController {
               email: emailController.text, password: passwordController.text)
           .then((value) async {
         await getCurrentLocation();
-        Get.find<HomeController>().setTagPins();
+        // Get.find<HomeController>().setTagPins();
 
         Get.find<GeneralController>().gunBox.put(cUserSession, true);
+        await FirebaseNotifications().getDeviceToken();
+
+        await getUserDataByEmail(email: emailController.text).then((value) {
+          Get.log("login email ${value[0]["email"]}");
+          Get.log("login user name ${value[0]["user_name"]}");
+          Get.find<GeneralController>().gunBox.put(cUserEmail, value[0]["email"]);
+          Get.find<GeneralController>().gunBox.put(cUserName, value[0]["user_name"]);
+          // setAccountData(value[0]["user_name"], value[0]["email"], FirebaseAuth.instance.currentUser!.uid);
+
+        });
         Get.to(() => HomeScreen());
         emailController.clear();
         passwordController.clear();

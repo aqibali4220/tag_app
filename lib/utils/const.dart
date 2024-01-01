@@ -10,3 +10,7 @@ import 'package:flutter/material.dart';
 
 
   const String cUserSession="user_session";
+  const String cDvToken="dvToken";
+
+const String cUserEmail="user_email";
+const String cUserName="user_name";

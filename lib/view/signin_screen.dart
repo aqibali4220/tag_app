@@ -5,6 +5,7 @@ import 'package:tag_app/utils/colors.dart';
 import 'package:tag_app/utils/images.dart';
 import 'package:tag_app/view/dashboard.dart';
 import 'package:tag_app/view/home_screen.dart';
+import 'package:tag_app/view/login_screen.dart';
 
 import '../controllers/auth_controller.dart';
 import '../utils/size_config.dart';
@@ -203,6 +204,17 @@ class SignInScreen extends StatelessWidget {
                     child: Text("sign5".tr.toString().toUpperCase(),
                         style: kSize28W700ColorWhite),
                   ),
+                ),
+                SizedBox(
+                  height: getHeight(100),
+                ),
+                GestureDetector(
+                  onTap: (){
+                    Get.off(()=>LoginScreen());
+                  },
+                  child: RichText(text: TextSpan(text: "Already have an account? ",style: kSize18W700ColorWhite,children: [
+                    TextSpan(text: "Login Now!",style: kSize18W700ColorWhite.copyWith(decoration: TextDecoration.underline))
+                  ]),),
                 ),
                 SizedBox(
                   height: getHeight(12),

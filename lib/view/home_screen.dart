@@ -1,13 +1,18 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:tag_app/controllers/general_controller.dart';
 import 'package:tag_app/controllers/home_controller.dart';
 import 'package:tag_app/utils/colors.dart';
+import 'package:tag_app/utils/permissions.dart';
 import 'package:tag_app/utils/size_config.dart';
 import 'package:tag_app/view/drawer_screen.dart';
 import 'package:tag_app/widgets/progress_bar.dart';
 
+import '../data/permissions.dart';
 import '../utils/images.dart';
 import '../utils/text_styles.dart';
 import '../widgets/custom_textfield.dart';
@@ -215,8 +220,7 @@ class HomeScreen extends StatelessWidget {
                                           onChanged: (int? value) {
                                             setState(() {
                                               selectedRadio = value!;
-                                              Get.find<GeneralController>()
-                                                  .bottomSheet(context);
+                                              bottomSheet(context,Platform.isAndroid ? Permission.storage : Permission.photos);
                                             });
                                           },
                                         ),
@@ -263,7 +267,8 @@ class HomeScreen extends StatelessWidget {
                   height: getHeight(40),
                 ),
                 GestureDetector(
-                  onTap: () {
+                  onTap: () async {
+                    await getCurrentLocation();
                     Get.dialog(ProgressBar(), barrierDismissible: false);
 
                     selectedRadio == 0 &&
@@ -292,10 +297,10 @@ class HomeScreen extends StatelessWidget {
                 SizedBox(
                   height: getHeight(50),
                 ),
-                Text(
-                  "home8".tr,
-                  style: kSize16ColorWhite,
-                ),
+                // Text(
+                //   "home8".tr,
+                //   style: kSize16ColorWhite,
+                // ),
                 SizedBox(
                   height: getHeight(20),
                 )

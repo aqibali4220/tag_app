@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,6 +9,7 @@ import 'package:get/get.dart';
 import 'package:tag_app/controllers/general_controller.dart';
 import 'package:tag_app/utils/singleton.dart';
 
+import '../utils/const.dart';
 import '../widgets/custom_toasts.dart';
 
 class HomeController extends GetxController {
@@ -17,105 +19,92 @@ class HomeController extends GetxController {
   TextEditingController controller4 = TextEditingController();
   // TextEditingController controller5 = TextEditingController();
 
-  CollectionReference users = FirebaseFirestore.instance.collection('users');
+  CollectionReference taglist = FirebaseFirestore.instance.collection('tag_pins');
 
   RxInt radioValue = 0.obs;
 
-  setGunPin() async {
-    DocumentReference docRef =
-        users.doc(FirebaseAuth.instance.currentUser!.uid);
+  void setGunPin() {
+    String randomString = generateRandomString(8);
 
-    final docSnapshot = await docRef.get();
-    // if (docSnapshot.exists) {
-    // await deleteGunPostDataInFirebase();
-    docRef
-        .collection("tag_pins")
-        .doc(FirebaseAuth.instance.currentUser!.uid)
-        .update({
-      "gun_pin_list": FieldValue.arrayUnion([
-        {
-          "where are you": controller1.text,
-          "describe the person": controller2.text,
-          "describe the situation": controller3.text,
-          "do you feel safe": controller4.text,
-          "shooter_pic": "",
-          "current_lat": SingleToneValue.instance.currentLat,
-          "current_lng": SingleToneValue.instance.currentLng,
-        }
-      ]),
-    }).whenComplete(() {
-      cleanControllers();
+    final data = {
+      "chatRoomId":randomString,
+      "user_name": Get.find<GeneralController>().gunBox.get(cUserName),
+      "where are you": controller1.text,
+      "describe the person": controller2.text,
+      "describe the situation": controller3.text,
+      "do you feel safe": controller4.text,
+      "shooter_pic": "",
+      "current_lat": SingleToneValue.instance.currentLat,
+      "current_lng": SingleToneValue.instance.currentLng,
+      "dv_token":
+          Get.find<GeneralController>().gunBox.get(cDvToken, defaultValue: ""),
+      'userId': FirebaseAuth
+          .instance.currentUser!.uid, // Replace with the actual user's ID
+      'timestamp': DateTime.now(),
+    };
+
+    // Check if Firebase data is empty, and initialize with a default list if necessary.
+    setFireStoreData(data);
+  }
+
+  void setGunPinWithPic() async {
+    final downloadUrl = await uploadImageToFirebaseStorage(
+        Get.find<GeneralController>().imageFile!);
+    String randomString = generateRandomString(8);
+
+    if (downloadUrl != null) {
+      final data = {
+        "chatRoomId":randomString,
+        "user_name": Get.find<GeneralController>().gunBox.get(cUserName),
+        // "user_email": Get.find<GeneralController>().gunBox.get(cUserEmail),
+        "where are you": controller1.text,
+        "describe the person": controller2.text,
+        "describe the situation": controller3.text,
+        "do you feel safe": controller4.text,
+        "current_lat": SingleToneValue.instance.currentLat,
+        "current_lng": SingleToneValue.instance.currentLng,
+        "shooter_pic": downloadUrl,
+        "dv_token": Get.find<GeneralController>().gunBox.get(cDvToken),
+        'userId': FirebaseAuth
+            .instance.currentUser!.uid, // Replace with the actual user's ID
+        'timestamp': DateTime.now(),
+      };
+
+      // Check if Firebase data is empty, and initialize with a default list if necessary.
+      setFireStoreData(data);
+    } else {
+      // Handle the case where the image upload fails.
+      // You can log an error or show an error message to the user.
+    }
+  }
+
+  Future<void> setFireStoreData(Map<String, dynamic> data) async {
+    try {
+      await taglist.add(data);
       Get.back();
-    }).catchError((error) {
-      // Get.back();
-      Get.log("Failed to add data: $error");
-
-      CustomToast.failToast(msg: "Failed to add data: $error");
-    });
-    // }
+      cleanControllers();
+      CustomToast.successToast(msg: "Pin Successfully Placed");
+    } catch (error) {
+      // Handle errors gracefully, e.g., throw custom exceptions or show specific error messages.
+      Get.log("Failed to update data: $error");
+      CustomToast.failToast(msg: "Failed to update data: $error");
+    }
   }
 
-  setGunPinWithPic() async {
-    int i = 0;
-    // Create a reference to the file you want to upload.
-    // final file = File('path/to/file');
-    String imgName = Get.find<GeneralController>().image!.path.split("/").last;
+  Future<String?> uploadImageToFirebaseStorage(File imageFile) async {
+    try {
 
-    final ref = FirebaseStorage.instance.ref('images/$imgName');
-
-    // Create a `UploadTask` object and start the upload.
-    final task = ref.putFile(Get.find<GeneralController>().imageFile!);
-    // Get the download URL of the uploaded file.
-
-    // Wait for the upload to complete.
-    task.whenComplete(() async {
-      final downloadUrl = await task.snapshot.ref.getDownloadURL();
-
-      Get.log("img  url ${downloadUrl.toString()}");
-      DocumentReference docRef =
-          users.doc(FirebaseAuth.instance.currentUser!.uid);
-
-      // await deleteGunPostDataInFirebase();
-      docRef
-          .collection("tag_pins")
-          .doc(FirebaseAuth.instance.currentUser!.uid)
-          .update({
-        "gun_pin_list": FieldValue.arrayUnion([
-          {
-            "where are you": controller1.text,
-            "describe the person": controller2.text,
-            "describe the situation": controller3.text,
-            "do you feel safe": controller4.text,
-            "current_lat": SingleToneValue.instance.currentLat,
-            "current_lng": SingleToneValue.instance.currentLng,
-            "shooter_pic": downloadUrl.toString(),
-          }
-        ]),
-      }).whenComplete(() {
-        i++;
-        cleanControllers();
-        Get.find<GeneralController>().imageFile = null;
-        Get.find<GeneralController>().image = null;
-        Get.back();
-      }).catchError((error) {
-        // Get.back();
-        Get.log("Failed to add data: $error");
-
-        CustomToast.failToast(msg: "Failed to add data: $error");
-      });
-    });
-  }
-
-  deleteGunPostDataInFirebase() async {
-    CollectionReference collectionRef = users
-        .doc(FirebaseAuth.instance.currentUser!.uid)
-        .collection("tag_pins");
-
-    QuerySnapshot querySnapshot = await collectionRef.get();
-    List<DocumentSnapshot> documents = querySnapshot.docs;
-
-    for (DocumentSnapshot document in documents) {
-      await document.reference.delete();
+      final imgName = imageFile.path.split("/").last;
+      final ref = FirebaseStorage.instance.ref('images/$imgName');
+      Get.log("ref img$ref");
+      final task = ref.putFile(imageFile);
+      await task.whenComplete(() {});
+      return await task.snapshot.ref.getDownloadURL();
+    } catch (error) {
+      // Handle errors gracefully, e.g., throw custom exceptions or show specific error messages.
+      Get.log("Failed to upload image: $error");
+      CustomToast.failToast(msg: "Failed to upload image: $error");
+      return null;
     }
   }
 
@@ -124,33 +113,16 @@ class HomeController extends GetxController {
     controller2.clear();
     controller3.clear();
     controller4.clear();
+    Get.find<GeneralController>().imageFile = null;
+    Get.find<GeneralController>().image = null;
+    Get.find<GeneralController>().update();
   }
 
-  setTagPins() {
-    DocumentReference docRef =
-        users.doc(FirebaseAuth.instance.currentUser!.uid);
-    docRef
-        .collection("tag_pins")
-        .doc(FirebaseAuth.instance.currentUser!.uid)
-        .set({
-      "gun_pin_list": FieldValue.arrayUnion([
-        {
-          "where are you": "",
-          "describe the person": "",
-          "describe the situation": "",
-          "do you feel safe": "",
-          "shooter_pic": "",
-          "current_lat": "",
-          "current_lng": "",
-        }
-      ])
-    }, SetOptions(merge: true)).whenComplete(() {
 
-    }).catchError((error) {
-      // Get.back();
-      Get.log("Failed to add data: $error");
-
-      CustomToast.failToast(msg: "Failed to add data: $error");
-    });
+  String generateRandomString(int length) {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    final random = Random();
+    return List.generate(length, (index) => chars[random.nextInt(chars.length)]).join();
   }
+
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
+import 'package:tag_app/view/signin_screen.dart';
 
 import '../controllers/auth_controller.dart';
 import '../utils/colors.dart';
@@ -102,6 +103,17 @@ class LoginScreen extends StatelessWidget {
                     child: Text("mission4".tr.toString().toUpperCase(),
                         style: kSize28W700ColorWhite),
                   ),
+                ),
+                SizedBox(
+                  height: getHeight(350),
+                ),
+                GestureDetector(
+                  onTap: (){
+                    Get.off(()=>SignInScreen());
+                  },
+                  child: RichText(text: TextSpan(text: "Don't have an account? ",style: kSize18W700ColorWhite,children: [
+                    TextSpan(text: "Signup Now!",style: kSize18W700ColorWhite.copyWith(decoration: TextDecoration.underline))
+                  ]),),
                 ),
                 SizedBox(
                   height: getHeight(12),

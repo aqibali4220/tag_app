@@ -5,6 +5,8 @@ class SingleToneValue {
   double currentLat=0.0;
   double currentLng=0.0;
 
+  // String  dvToken="";
+
 
   SingleToneValue._privateConstructor();
 

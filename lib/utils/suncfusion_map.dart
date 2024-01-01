@@ -1,29 +1,25 @@
-
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
-import 'package:share/share.dart';
 import 'package:syncfusion_flutter_maps/maps.dart';
-
-import '../../Ui/values/my_colors.dart';
-import '../../controllers/services_controller/services_controller.dart';
-import '../../data/constants/constants.dart';
-import '../../data/dynamic_link.dart';
-import '../../data/models/get_all_products_by_keyword/get_all_products_by_keyword.dart';
-import '../Values/dimens.dart';
-import '../farmer_profile_screen/farmer_profile_screen.dart';
-
-import '../product_details/product_details.dart';
-import '../product_reviews/product_reviews.dart';
-import '../values/my_imgs.dart';
+import 'package:tag_app/utils/chat_module_by_aqib/view/chat_screen.dart';
+import 'package:tag_app/utils/images.dart';
+import 'package:tag_app/utils/singleton.dart';
+import 'package:tag_app/utils/size_config.dart';
+import 'package:tag_app/utils/text_styles.dart';
+import '../controllers/general_controller.dart';
+import '../widgets/progress_bar.dart';
+import 'colors.dart';
+import 'const.dart';
+import 'get_gun_pin_data.dart';
 
 class SyncfusionMap extends StatefulWidget {
-  List<ProductListByKeyword>? products;
-  List<int>? pID;
   // String? subcatID;
-  SyncfusionMap({required this.products, required this.pID});
+
+  final List<dynamic> gunPins;
+  const SyncfusionMap({super.key, required this.gunPins});
 
   @override
   State<SyncfusionMap> createState() => _SyncfusionMapState();
@@ -47,7 +43,6 @@ class _SyncfusionMapState extends State<SyncfusionMap> {
   late bool _canUpdateZoomLevel;
   bool _isDesktop = false;
 
-
   @override
   void initState() {
     super.initState();
@@ -59,8 +54,9 @@ class _SyncfusionMapState extends State<SyncfusionMap> {
       minZoomLevel: 3,
       maxZoomLevel: 18,
       focalLatLng: MapLatLng(
-          double.parse(widget.products![_currentSelectedIndex].lat.toString()),
-          double.parse(widget.products![_currentSelectedIndex].lng.toString())),
+        double.parse(SingleToneValue.instance.currentLat.toString()),
+        double.parse(SingleToneValue.instance.currentLng.toString()),
+      ),
       enableDoubleTapZooming: true,
     );
   }
@@ -75,10 +71,6 @@ class _SyncfusionMapState extends State<SyncfusionMap> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textTheme = theme.textTheme;
-    final ThemeData themeData = Theme.of(context);
-
     if (_canUpdateZoomLevel) {
       _zoomPanBehavior.zoomLevel = _isDesktop ? 5 : 16;
       _canUpdateZoomLevel = false;
@@ -92,29 +84,25 @@ class _SyncfusionMapState extends State<SyncfusionMap> {
             (MediaQuery.of(context).orientation == Orientation.landscape)
                 ? (_isDesktop ? 0.5 : 0.7)
                 : 0.95);
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
         centerTitle: true,
-        leading: Padding(
-          padding:  EdgeInsets.all(8.0.h),
-          child: CircleAvatar(
-            backgroundColor: MyColors.bodyBackground,
-            child: IconButton(
-                icon: Image.asset(
-                  MyImgs.back1,
-                  height: (Dimens.size22.h),
-                  width: (Dimens.size25.w),
-                  color: MyColors.black,
-                  fit: BoxFit.cover,
-                ),
-                onPressed: () => Get.back(),
-              ),
+        leading: GestureDetector(
+          onTap: () {
+            Get.back();
+          },
+          child: const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Icon(
+              Icons.arrow_back,
+              color: black,
+            ),
           ),
         ),
-
       ),
       body: Stack(
         children: [
@@ -124,7 +112,7 @@ class _SyncfusionMapState extends State<SyncfusionMap> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 zoomPanBehavior: _zoomPanBehavior,
                 controller: _mapController,
-                initialMarkersCount: widget.products!.length,
+                initialMarkersCount: widget.gunPins.length,
                 tooltipSettings: const MapTooltipSettings(
                   color: Colors.transparent,
                 ),
@@ -132,10 +120,10 @@ class _SyncfusionMapState extends State<SyncfusionMap> {
                   final double markerSize =
                       _currentSelectedIndex == index ? 80 : 40;
                   return MapMarker(
-                    latitude:
-                        double.parse(widget.products![index].lat.toString()),
-                    longitude:
-                        double.parse(widget.products![index].lng.toString()),
+                    latitude: double.parse(
+                        widget.gunPins[index]['current_lat'].toString()),
+                    longitude: double.parse(
+                        widget.gunPins[index]['current_lng'].toString()),
                     alignment: Alignment.bottomCenter,
                     child: GestureDetector(
                       onTap: () {
@@ -153,43 +141,8 @@ class _SyncfusionMapState extends State<SyncfusionMap> {
                         duration: const Duration(milliseconds: 250),
                         height: markerSize,
                         width: markerSize,
-                        child: Container(
-                          height: 150,
-                          width: 150,
-                          decoration: BoxDecoration(
-                            boxShadow: [
-                              BoxShadow(
-                                  blurRadius: 2,
-                                  spreadRadius: 0,
-                                  color: MyColors.black.withOpacity(0.1),
-                                  offset: Offset(0, 0))
-                            ],
-                            color: _currentSelectedIndex == index
-                                ? MyColors.primaryColor
-                                : MyColors.primary2,
-                            borderRadius: BorderRadius.circular(100),
-                            // shape: BoxShape.circle,
-                            // image: DecorationImage(
-                            //   image: NetworkImage("${Constants.baseUrl}/${widget.products![index].catImg}"),
-                            //   fit: BoxFit.cover
-                            // )
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(100),
-                            child: Container(
-                                padding: _currentSelectedIndex == index
-                                    ? EdgeInsets.all(20)
-                                    : EdgeInsets.all(10),
-                                height: 40,
-                                width: 40,
-                                child: Image.network(
-                                  "${Constants.baseUrl}/${widget.products![index].catImg}",
-                                  height: 150,
-                                  width: 150,
-                                  fit: BoxFit.contain,
-                                )),
-                          ),
-                        ),
+                        child: const Icon(Icons.pin_drop_sharp,
+                            color: red, size: 25),
                       ),
                     ),
                   );
@@ -202,16 +155,16 @@ class _SyncfusionMapState extends State<SyncfusionMap> {
             child: Container(
               height: _cardHeight,
               // width: 470,
-              padding:  EdgeInsets.only(bottom: 10.h, top: 40.h),
-              decoration: BoxDecoration(
-                  color: MyColors.bodyBackground,
+              padding: const EdgeInsets.only(bottom: 10, top: 40),
+              decoration: const BoxDecoration(
+                  color: bodyBackground,
                   borderRadius: BorderRadius.only(
                       topRight: Radius.circular(36),
                       topLeft: Radius.circular(36))),
 
               /// PageView which shows the world wonder details at the bottom.
               child: PageView.builder(
-                itemCount: widget.products!.length,
+                itemCount: widget.gunPins.length,
                 onPageChanged: _handlePageChange,
                 controller: _pageViewController,
                 itemBuilder: (BuildContext context, int index) {
@@ -226,359 +179,184 @@ class _SyncfusionMapState extends State<SyncfusionMap> {
                             GestureDetector(
                               onTap: () async {
                                 Get.log("on click");
-                                await Get.find<ServicesController>()
-                                    .getSellerProductDetails(widget
-                                        .products![index].productId
-                                        .toString());
-                                Get.to(() => ProductDetails(
-                                      dynamicLink: false,
-                                      pID: widget.pID,
-                                      avgRating: double.parse(
-                                          widget.products![index].avgRating!),
-                                      isFavourite:
-                                          widget.products![index].liked,
-                                      reviews: widget
-                                          .products![index].numOfReviews
-                                          .toString(),
-                                      sellerImage:
-                                          widget.products![index].sellerImage,
-                                    ));
+                                // Get.to(()=>GroupChatScreen(),transition: Transition.noTransition);
                               },
                               child: Container(
-                                margin: EdgeInsets.only(top:10.h),
-                                width: 375.w,
-                                height: 172.h,
-
+                                margin: const EdgeInsets.only(top: 10),
+                                width: getWidth(375),
+                                height: getHeight(172),
                                 decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16.w)
-                                  ,
-                                  color: MyColors.bodyBackground,
+                                  borderRadius: BorderRadius.circular(16),
+                                  color: red.withOpacity(0.7),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: MyColors.black.withOpacity(0.1),
+                                      color: black.withOpacity(0.1),
                                       spreadRadius: 0,
                                       blurRadius: 2,
-                                      offset: Offset(0, 0),
+                                      offset: const Offset(0, 0),
                                     )
                                   ],
                                 ),
                                 child: Row(
                                   children: [
+                                    SizedBox(
+                                      width: getWidth(15),
+                                    ),
                                     ClipRRect(
-                                      borderRadius:
-                                          BorderRadius.circular(16.0.w),
-                                      child: Container(
-                                        width: (Dimens.size140).w,
-                                        decoration: BoxDecoration(
-                                          image: DecorationImage(
-                                            image: NetworkImage(
-                                                "${Constants.baseUrl}/${widget.products![index].productImage}"),
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: CachedNetworkImage(
+                                        width: getWidth(140),
+                                        height: getHeight(140),
+                                        imageUrl: widget.gunPins[index]
+                                            ['shooter_pic'],
+                                        placeholder: (context, url) =>
+                                            ProgressBar(),
+                                        errorWidget: (context, url, error) =>
+                                            Image.asset(no_image),
+                                        fit: BoxFit.fill,
                                       ),
                                     ),
-                                    Padding(
-                                      padding: EdgeInsets.only(
-                                          left: Dimens.size12.w,
-                                          top: Dimens.size20.h),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              GestureDetector(
-                                                onTap: () {
-                                                  Get.find<ServicesController>()
-                                                      .sellerDetailsShimmer
-                                                      .value = false;
-                                                  Get.find<ServicesController>()
-                                                      .update();
-                                                  Get.find<ServicesController>()
-                                                          .sellerDetailsShimmer
-                                                          .value
-                                                      ? Get.log('show Shimmer')
-                                                      : Get.to(() =>
-                                                          FarmerProfileScreen(
-                                                            id: widget
-                                                                .products![
-                                                                    index]
-                                                                .productId
-                                                                .toString(),
-                                                            farmerId: widget
-                                                                .products![
-                                                                    index]
-                                                                .sellerId
-                                                                .toString(),
-                                                          ));
-                                                  Get.log(widget
-                                                      .products![index].sellerId
-                                                      .toString());
-                                                  Get.find<ServicesController>()
-                                                      .gettingSellerDetailsById(
-                                                          widget
-                                                              .products![index]
-                                                              .sellerId
-                                                              .toString());
-                                                },
-                                                child: Container(
-                                                  height: 55.h,
-                                                  width: 55.w,
-                                                  decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      image: DecorationImage(
-                                                          image: NetworkImage(
-                                                              "${Constants.baseUrl}/${widget.products![index].sellerImage!}"),
-                                                          fit: BoxFit.cover)),
-                                                ),
-                                              ),
-                                              SizedBox(
-                                                width: (Dimens.size8).w,
-                                              ),
-                                              Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Container(
-                                                    height: 40.h,
-                                                    width: 115.w,
-                                                    alignment:
-                                                        Alignment.centerLeft,
-                                                    child: FittedBox(
-                                                      child: Text(
-                                                        widget.products![index]
-                                                            .productName!,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        softWrap: true,
-                                                        style: textTheme.headline3,
-                                                        textAlign:
-                                                            TextAlign.left,
-                                                        maxLines: 2,
+                                    SizedBox(
+                                      // color: red,
+                                      width: getWidth(220),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 15, horizontal: 10),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              widget.gunPins[index]
+                                                      ['describe the person']
+                                                  .toString()
+                                                  .capitalizeFirst
+                                                  .toString(),
+                                              style: kSize20WhiteW400Text
+                                                  .copyWith(color: yellow),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                              softWrap: true,
+                                            ),
+                                            SizedBox(
+                                              height: getHeight(8),
+                                            ),
+                                            Text(
+                                              widget.gunPins[index]
+                                                      ['where are you']
+                                                  .toString()
+                                                  .capitalizeFirst
+                                                  .toString(),
+                                              style: kSize18W600ColorBlack
+                                                  .copyWith(color: yellow),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                              softWrap: true,
+                                            ),
+                                            SizedBox(
+                                              height: getHeight(8),
+                                            ),
+                                            Text(
+                                              "Situation is ${widget.gunPins[index]['describe the situation']}",
+                                              style: kSize16ColorWhite.copyWith(
+                                                  color: yellow),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                              softWrap: true,
+                                            ),
+                                            SizedBox(
+                                              height: getHeight(8),
+                                            ),
+                                            Text(
+                                              "I feel ${widget.gunPins[index]['do you feel safe']}",
+                                              style: kSize14ColorBlack.copyWith(
+                                                  color: yellow),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                              softWrap: true,
+                                            ),
+                                            FirebaseAuth.instance.currentUser!
+                                                        .uid ==
+                                                    widget.gunPins[index]
+                                                        ['userId']
+                                                ? GestureDetector(
+                                                    onTap: () {
+                                                      Get.to(
+                                                          () => ChatScreen(
+                                                              chatRoomId: widget.gunPins[index][
+                                                                  'chatRoomId'],
+                                                              senderUid: FirebaseAuth
+                                                                  .instance
+                                                                  .currentUser!
+                                                                  .uid
+                                                                  .toString(),
+                                                              senderName:
+                                                                  Get.find<GeneralController>()
+                                                                      .gunBox
+                                                                      .get(
+                                                                          cUserName),
+                                                              receiverUid: "",
+                                                              receiverName: "",
+                                                              receiverDeviceToken:""),
+                                                          transition: Transition.noTransition);
+                                                    },
+                                                    child: Align(
+                                                      alignment:
+                                                          Alignment.centerRight,
+                                                      child: Icon(
+                                                        Icons.chat_rounded,
+                                                        color: yellow,
+                                                        size: getHeight(30),
+                                                      ),
+                                                    ),
+                                                  )
+                                                : GestureDetector(
+                                                    onTap: () {
+                                                      Get.to(
+                                                          () => ChatScreen(
+                                                              chatRoomId: widget.gunPins[index][
+                                                                  'chatRoomId'],
+                                                              senderUid: FirebaseAuth
+                                                                  .instance
+                                                                  .currentUser!
+                                                                  .uid
+                                                                  .toString(),
+                                                              senderName:
+                                                                  Get.find<GeneralController>()
+                                                                      .gunBox
+                                                                      .get(
+                                                                          cUserName),
+                                                              receiverUid: widget
+                                                                      .gunPins[index]
+                                                                  ['userId'],
+                                                              receiverName: widget.gunPins[index]
+                                                                  ['user_name'],
+                                                              receiverDeviceToken:
+                                                                  widget.gunPins[index]
+                                                                      ['dv_token']),
+                                                          transition: Transition.noTransition);
+                                                    },
+                                                    child: Align(
+                                                      alignment:
+                                                          Alignment.centerRight,
+                                                      child: Icon(
+                                                        Icons.chat_rounded,
+                                                        color: yellow,
+                                                        size: getHeight(30),
                                                       ),
                                                     ),
                                                   ),
-                                                  SizedBox(
-                                                    height: 2.h,
-                                                  ),
-                                                  GestureDetector(
-                                                    onTap: () async {
-                                                      Get.find<
-                                                              ServicesController>()
-                                                          .productReviewShimmer
-                                                          .value = false;
-                                                      Get.find<
-                                                              ServicesController>()
-                                                          .update();
-                                                      Get.find<ServicesController>()
-                                                              .productReviewShimmer
-                                                              .value
-                                                          ? Get.log(
-                                                              "show shimmer")
-                                                          : Get.to(() =>
-                                                              ProductReviews());
-                                                      await Get.find<
-                                                              ServicesController>()
-                                                          .gettingProductReviewsById(
-                                                              widget
-                                                                  .products![
-                                                                      index]
-                                                                  .productId
-                                                                  .toString());
-                                                    },
-                                                    child: Row(
-                                                      children: [
-                                                        RatingBarIndicator(
-                                                          rating: double.parse(
-                                                              widget
-                                                                  .products![
-                                                                      index]
-                                                                  .avgRating!),
-                                                          itemBuilder: (context,
-                                                                  index) =>
-                                                              Icon(
-                                                            Icons.star,
-                                                            color: MyColors
-                                                                .primaryColor,
-                                                          ),
-                                                          unratedColor:
-                                                              MyColors.black,
-                                                          itemCount: 5,
-                                                          itemSize: 16.0,
-                                                          direction:
-                                                              Axis.horizontal,
-                                                        ),
-                                                        FittedBox(
-                                                          child: Text(
-                                                            "(${widget.products![index].numOfReviews}) ",
-                                                            style: TextStyle(
-                                                                //   fontFamily: "TiemposHeadline-Regular",
-                                                                color: MyColors
-                                                                    .primaryColor,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w300),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                          SizedBox(
-                                            height: Dimens.size10.h,
-                                          ),
-
-                                          // Row(
-                                          //   children: [
-                                          //     Icon(
-                                          //       Icons.access_time,
-                                          //       color: MyColors.grey
-                                          //           .withOpacity(0.4),
-                                          //       size: (17).w,
-                                          //     ),
-                                          //     SizedBox(
-                                          //       width: (Dimens.size10).w,
-                                          //     ),
-                                          //     Text(
-                                          //       '${widget.products![index].operatingHours}',
-                                          //       style: TextStyle(
-                                          //           fontSize:
-                                          //               (Dimens.size15).sp,
-                                          //           fontWeight: FontWeight.w500,
-                                          //           fontStyle: FontStyle.normal,
-                                          //           color: MyColors.grey
-                                          //               .withOpacity(0.4)),
-                                          //     )
-                                          //   ],
-                                          // ),
-
-                                          SizedBox(
-                                            height: (Dimens.size12).h,
-                                          ),
-                                          // Padding(
-                                          //   padding: EdgeInsets.only(left: (28).w),
-                                          //   child: Text(
-                                          //     'Price : \$50',
-                                          //     style: TextStyle(
-                                          //         fontSize: (Dimens.size14).sp,
-                                          //         fontWeight: FontWeight.w400,
-                                          //         color: MyColors.black),
-                                          //   ),
-                                          // ),
-                                          Padding(
-                                            padding:
-                                                EdgeInsets.only(right: 5.w),
-                                            child: Row(
-                                              children: [
-                                                Image.asset(
-                                                  MyImgs.money1,
-                                                  fit: BoxFit.contain,
-                                                  height: (Dimens.size20).h,
-                                                  width: (Dimens.size20).w,
-                                                ),
-                                                SizedBox(
-                                                  width: (Dimens.size6).w,
-                                                ),
-                                                Container(
-                                                  width: Dimens.size110.w,
-                                                  child: FittedBox(
-                                                    child: Text(
-                                                      '${widget.products![index].productPrice}',
-                                                      style: textTheme.headline3,
-                                                    ),
-                                                  ),
-                                                ),
-                                                // SizedBox(width: 80,),
-
-                                                // InkWell(
-                                                //   // onTap: () => Get.to(
-                                                //   //     ChatScreen(),
-                                                //   //     arguments: map),
-                                                //   child: Icon(
-                                                //     Icons.messenger_outline,
-                                                //     size: (Dimens.size18).w,
-                                                //     color: MyColors.black,
-                                                //   ),
-                                                // ),
-                                                SizedBox(
-                                                  width: 17.w,
-                                                ),
-                                                InkWell(
-                                                  // onTap: () => Get.to(
-                                                  //     SearchLocationScreen()),
-                                                  child: ImageIcon(
-                                                    AssetImage(
-                                                      MyImgs.loc1,
-                                                    ),
-                                                    size: 17.w,
-                                                  ),
-                                                ),
-                                                SizedBox(
-                                                  width: 16.w,
-                                                ),
-                                                InkWell(
-                                                  onTap: () {
-                                                    Get.dialog(
-                                                        Center(
-                                                            child:
-                                                                CircularProgressIndicator()),
-                                                        barrierDismissible:
-                                                            false);
-                                                    DynamicLinks()
-                                                        .createLink(
-                                                            "${widget.products![index].productId.toString()}",
-                                                            "product")
-                                                        .then((value) {
-                                                      Get.back();
-                                                      Get.log(
-                                                          "your link is $value");
-                                                      Share.share(value);
-                                                    });
-                                                  },
-                                                  // showShareDialog(context,widget.products![index].productId.toString()),
-                                                  child: Image.asset(
-                                                    MyImgs.shareIcon,
-                                                    fit: BoxFit.contain,
-                                                    height: (Dimens.size19).h,
-                                                    width: Dimens.size19.w,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-                            SizedBox(
-                              height: (Dimens.size20).h,
+                            const SizedBox(
+                              height: (20),
                             ),
-                            Positioned(
-                              top: (Dimens.size15).h,
-                              left: (Dimens.size8).w,
-                              child: Container(
-                                height: (37).h,
-                                width: (37).w,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: MyColors.black),
-                                child: Icon(
-                                  widget.products![index].liked == true
-                                      ? Icons.favorite
-                                      : Icons.favorite_outline,
-                                  size: Dimens.size25.w,
-                                  color: MyColors.primary2,
-                                ),
-                              ),
-                            )
                           ],
                         ),
                       ],
@@ -619,8 +397,8 @@ class _SyncfusionMapState extends State<SyncfusionMap> {
     /// center and the marker itself should not move to the center of the maps.
     if (_canUpdateFocalLatLng) {
       _zoomPanBehavior.focalLatLng = MapLatLng(
-        double.parse(widget.products![_currentSelectedIndex].lat.toString()),
-        double.parse(widget.products![_currentSelectedIndex].lng.toString()),
+        double.parse(widget.gunPins[index]['current_lat'].toString()),
+        double.parse(widget.gunPins[index]['current_lng'].toString()),
       );
     }
 
